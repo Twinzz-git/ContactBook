@@ -1,5 +1,7 @@
-import React, { useContext, useEffect, createContext } from 'react';
+import React, { useContext, useEffect, useState, createContext } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import NetInfo from '@react-native-community/netinfo';
+import { useNetInfo } from '@react-native-community/netinfo';
 import {
     addContactAction,
     setContactsAction,
@@ -20,7 +22,29 @@ export const ContactsProvider = ({ children }) => {
     const dispatch = useDispatch();
     const contacts = useSelector(state => state.contacts);
 
-    // Al montar, abre Realm y carga contactos en Redux
+    // Option 1: Using useNetInfo hook (from PDF)
+    const netInfo = useNetInfo();
+    useEffect(() => {
+        if (netInfo.isConnected) {
+            triggerSync();
+        }
+    }, [netInfo.isConnected]);
+
+    // Option 2: Using NetInfo.addEventListener (from PDF)
+    const [isOnline, setIsOnline] = useState(false);
+    useEffect(() => {
+        const unsubscribe = NetInfo.addEventListener(state => {
+            setIsOnline(!!state.isConnected); // !! converts truthy to bool
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const triggerSync = async () => {
+        // TODO: implement sync logic with your API
+        console.log('Syncing contacts with server...');
+    };
+
+    // Abre Realm y carga contactos al iniciar
     useEffect(() => {
         const initRealm = async () => {
             await openRealm();
@@ -45,7 +69,7 @@ export const ContactsProvider = ({ children }) => {
         dispatch(removeContactAction(id));
     };
 
-    const value = { contacts, addContact, editContact, removeContact };
+    const value = { contacts, addContact, editContact, removeContact, isOnline, triggerSync };
 
     return (
         <ContactsContext.Provider value={value}>
